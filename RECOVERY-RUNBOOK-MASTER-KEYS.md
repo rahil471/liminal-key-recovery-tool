@@ -2,7 +2,7 @@
 
 This runbook recovers your two master private keys from your mobile backup. 
 
-- **ECDSA master key (`xprv`)** — controls your EVM and Tron wallets.
+- **ECDSA master key (`xprv`)** — controls your EVM, Tron and BTC wallets.
 - **EdDSA master key + chain code** — controls your Solana wallets.
 
 **Whoever holds these keys controls all your wallets.** Protect them like the backup itself.
@@ -30,7 +30,7 @@ This runbook recovers your two master private keys from your mobile backup.
 5. If asked to pick a key, pick the one Liminal named. You may be asked twice.
 6. You must see `Recovery package verification successful`. If not, stop and contact Liminal.
 
-## 3. Recover the ECDSA master key (EVM, Tron)
+## 3. Recover the ECDSA master key (EVM, Tron, BTC)
 
 1. Run the binary again. Press **Enter**. Choose **5**.
 2. Enter the `.zip` file name. Choose **2**. Type your backup password.
@@ -56,7 +56,7 @@ This runbook recovers your two master private keys from your mobile backup.
 
 ## Next step
 
-To move funds, get the derivation path for each wallet from Liminal. Then follow `RECOVERY-RUNBOOK.md`:
+To move funds, get the derivation path for each wallet (see [Liminal wallets derivation path strategy](https://docs.lmnl.app/docs/liminal-wallets-derivation-path-strategy) and the `walletKeys.path` field of the Retrieve a wallet API). Then follow `RECOVERY-RUNBOOK.md`:
 
-- **EVM, Tron:** start at step 3, item 4. Paste the `xprv` you recorded here.
+- **EVM, Tron, BTC:** in step 3, skip the items that get the `xprv`. Paste the `xprv` you recorded here.
 - **Solana:** run step 3 in full. The tool must derive the key from your backup, so keep the backup `.zip` and password.

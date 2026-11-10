@@ -1,33 +1,40 @@
-# Liminal Recovery Runbook — Mobile Backup (EVM, Solana, Tron)
+# Liminal Recovery Runbook — Mobile Backup (EVM, Tron, Solana, BTC)
 
 Use this only if you cannot reach your funds through Liminal.
 
 ## You need
 
 - Your mobile backup `.zip` file and its backup password.
-- The derivation path for each wallet. Liminal gives these; they are in the `walletKeys.path` field of the Retrieve a wallet API.
-  - **EVM, new wallets:** `m/44/60/0/{org_id}/{deposit_wallet_index}/0`
-  - **EVM, older wallets:** `m/44/60/0/0`
-  - **Tron:** `<PATH>`
-  - **Solana:** `<PATH>` (the full path to the address)
+- The derivation path for each wallet. Get the exact path from the `walletKeys.path` field of the Retrieve a wallet API. The strategy is in [Liminal wallets derivation path strategy](https://docs.lmnl.app/docs/liminal-wallets-derivation-path-strategy).
+
+  | Chain | New wallets | Legacy wallets |
+  |---|---|---|
+  | EVM | `m/44/60/0/{org_id}/{deposit_wallet_index}/0` | `m/44/60/0/0` |
+  | Tron | `m/44/195/0/{org_id}/{deposit_wallet_index}/0` | `m/44/195/0/0` |
+  | BTC | `m/49/1/0/{org_id}/{deposit_wallet_index}/0` | `m/49/1/0/0` |
+  | Solana | `m/44/501/0/{org_id}/{deposit_wallet_index}/0/{address_index}` | `m/44/501/0/0/{address_index}` |
+
+  - New wallets have `{org_id}` in the path. Wallets created before the new strategy use the legacy path.
+  - `{address_index}` 0 is the wallet's main address. The tools add it for EVM, Tron and BTC. For Solana, enter the full path.
+  - Liminal uses coin type `1` for BTC, not `0`.
+  - Warm wallets use `m/44/{coin}/2/{wallet_id}` (BTC: `m/49/1/2/{wallet_id}`).
 - Your destination address on each chain. Use addresses you control and have tested.
-- **Laptop A (offline):** wiped, Wi-Fi off, never connected during recovery.
-- **Laptop B (online):** clean, used only to send funds.
+- A laptop that is wiped, with Wi-Fi off. It stays offline while you recover the keys.
 - A USB stick.
 
-## 1. Prepare (Laptop B, online)
+## 1. Prepare
 
 1. Get the recovery tool repo from Liminal.
 2. Check the binary hash. It must match the hash Liminal sent you.
    - macOS / Linux: `shasum -a 256 bin/<binary>`
    - Windows: `certutil -hashfile bin\<binary> SHA256`
 3. In the `utils` folder run `npm install`.
-4. Download the Node.js installer for Laptop A.
+4. Download the Node.js installer.
 5. Copy the repo (with `utils/node_modules`) and the Node.js installer to the USB stick.
 
-## 2. Verify the backup (Laptop A, offline)
+## 2. Verify the backup (offline laptop)
 
-1. Install Node.js from the USB stick. Copy the repo to Laptop A.
+1. Install Node.js from the USB stick. Copy the repo to the laptop.
 2. Put your backup `.zip` in the repo's `bin` folder.
 3. Open a terminal in `bin`. Run the binary for your OS, e.g. `./liminal-key-recovery-manager-mac-arm`.
 4. Press **Enter**. Choose **4**.
@@ -36,7 +43,7 @@ Use this only if you cannot reach your funds through Liminal.
 7. If asked to pick a key, pick the one Liminal named. You may be asked twice.
 8. You must see `Recovery package verification successful`. If not, stop and contact Liminal.
 
-## 3. Get the keys (Laptop A, offline)
+## 3. Get the keys (offline laptop)
 
 **EVM and Tron**
 
@@ -53,6 +60,13 @@ Use this only if you cannot reach your funds through Liminal.
 
 If your address is not in the rows, the path is wrong. Stop and check the path with Liminal.
 
+**BTC**
+
+1. Get the `xprv` as in EVM and Tron, items 1–3.
+2. In `utils` run `node btc-derive.js`.
+3. Paste the `xprv`. Enter the BTC path from Liminal as the base path. Enter `0` as the start index and `20` as the count.
+4. Find the **Address** that matches your wallet. Copy its **Private Key (WIF)**.
+
 **Solana**
 
 1. Run the binary again. Press **Enter**. Choose **6**.
@@ -64,13 +78,14 @@ If your address is not in the rows, the path is wrong. Stop and check the path w
 
 Write each wallet's private key (and the Solana public key) to the USB stick. Do not save the `xprv`.
 
-## 4. Move the funds (Laptop B, online)
+## 4. Move the funds
 
 Send a small test amount first on each chain. Each wallet needs its native coin for fees.
 
-- **EVM:** import the private key into MetaMask. Send to your destination address. Repeat on each EVM network you use. The address is the same on all of them.
-- **Tron:** import the private key into TronLink. Send to your destination address. Token transfers (e.g. USDT) burn TRX for fees, so keep enough TRX.
-- **Solana:** the key cannot be imported into Phantom or other wallets. In `utils/solana-derive.js`:
+- **EVM:** the private key can be imported into wallets such as MetaMask to sign transactions. The address is the same on every EVM network.
+- **Tron:** the private key can be imported into wallets such as TronLink to sign transactions. Token transfers (e.g. USDT) burn TRX for fees, so keep enough TRX.
+- **BTC:** the WIF private key from `btc-derive.js` can be imported into a BTC wallet that accepts WIF keys to sign transactions.
+- **Solana:** the key cannot be imported into Phantom or other wallets. Use `utils/solana-derive.js` to sign and send:
   1. Remove the `/*` and `*/` around the "SAMPLE TRANSACTION CODE" block.
   2. Set `RPC_URL` to `https://api.mainnet-beta.solana.com`. Set `RECIPIENT` and `AMOUNT_SOL`. Leave a little SOL for the fee.
   3. Run `node solana-derive.js` and paste the keys. Note the transaction ID.
@@ -80,9 +95,10 @@ Send a small test amount first on each chain. Each wallet needs its native coin 
 ## 5. Clean up
 
 1. Confirm all funds arrived at the destination addresses.
-2. Remove the imported keys from MetaMask and TronLink.
-3. Wipe Laptop A, Laptop B and the USB stick.
-4. Treat the old wallets as compromised. Never send funds to them again.
+2. Remove the imported keys from every wallet you used.
+3. Delete the files `liminal-ecdsa-private-backup-key` and `liminal-eddsa-private-backup-key` from `bin`.
+4. Wipe the laptop and the USB stick.
+5. Treat the old wallets as compromised. Never send funds to them again.
 
 ## If something goes wrong
 
